@@ -35,34 +35,36 @@
 
     <div class="accordion" id="accordionExample">
         {% for question in questions %}
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="heading{{ question.id }}">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapse{{ question.id }}" aria-expanded="true"
-                    aria-controls="collapse{{ question.id }}">
-                    Question {{ question.id }}: {{ question.question_text }}
-                </button>
-                <button class="btn btn-danger delete-button" data-question-id="{{ question.id }}">Delete</button>
-                <button class="btn btn-primary edit-button" data-question-id="{{ question.id }}" data-bs-toggle="modal"
-                    data-bs-target="#editQuestionModal">Edit</button>
+        <div class="accordion-container" data-question-id="{{ question.id }}">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading{{ question.id }}">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ question.id }}" aria-expanded="true"
+                        aria-controls="collapse{{ question.id }}">
+                        Question {{ question.id }}: {{ question.question_text }}
+                    </button>
+                    <button class="btn btn-danger delete-button" data-question-id="{{ question.id }}">Delete</button>
+                    <button class="btn btn-primary edit-button" data-question-id="{{ question.id }}"
+                        data-bs-toggle="modal" data-bs-target="#editQuestionModal">Edit</button>
 
 
 
-            </h2>
-            <div id="collapse{{ question.id }}" class="accordion-collapse collapse "
-                aria-labelledby="heading{{ question.id }}" data-bs-parent="#accordionExample">
-                <div class="accordion-body">
-                    <ul class="list-group choices-container" id="choicesContainer{{ question.id }}"></ul>
+                </h2>
+                <div id="collapse{{ question.id }}" class="accordion-collapse collapse "
+                    aria-labelledby="heading{{ question.id }}" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <ul class="list-group choices-container" id="choicesContainer{{ question.id }}"></ul>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
 
-    <button id="addQuestionButton" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">Add
-        Question</button>
-    <button class="btn btn-secondary choices-button" data-bs-toggle="modal"
-        data-bs-target="#choicesModal">Choices</button>
+        <button id="addQuestionButton" class="btn btn-primary" data-bs-toggle="modal"
+            data-bs-target="#addQuestionModal">Add
+            Question</button>
+        <button class="btn btn-secondary choices-button" data-bs-toggle="modal"
+            data-bs-target="#choicesModal">Choices</button>
     </div>
 
 
@@ -202,28 +204,26 @@
 
 
         function addQuestion() {
-    const newQuestion = document.getElementById('newQuestionInput').value;
+            const newQuestion = document.getElementById('newQuestionInput').value;
 
-    if (newQuestion.trim() !== '') {
-        fetch('/add_question/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ question_text: newQuestion })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message === 'Question added successfully') {
-                    // Create a new accordion item for the added question
-                    const newQuestionId = data.question_id;
-                    const accordion = document.querySelector('.accordion');
-                    const accordionItem = document.createElement('div');
-                    accordionItem.classList.add('accordion-item');
+            if (newQuestion.trim() !== '') {
+                fetch('/add_question/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ question_text: newQuestion })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'Question added successfully') {
+                            const newQuestionId = data.question_id;
+                            const accordion = document.querySelector('.accordion');
+                            const accordionItem = document.createElement('div');
+                            accordionItem.classList.add('accordion-item');
 
-                    // Populate the new accordion item
-                    accordionItem.innerHTML = `
+                            accordionItem.innerHTML = `
                         <h2 class="accordion-header" id="heading${newQuestionId}">
                             <button class="accordion-button" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#collapse${newQuestionId}" aria-expanded="true"
@@ -241,19 +241,15 @@
                             </div>
                         </div>
                     `;
-
-                    // Append the new accordion item to the existing accordion
-                    accordion.appendChild(accordionItem);
-
-                    // Clear the input field
-                    document.getElementById('newQuestionInput').value = '';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    }
-}
+                            accordion.appendChild(accordionItem);
+                            document.getElementById('newQuestionInput').value = '';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        }
 
         document.addEventListener('click', function (event) {
             if (event.target.classList.contains('choices-button')) {
@@ -313,10 +309,12 @@
                 showDeleteConfirmation(questionId);
             }
         });
-
+      
         function showDeleteConfirmation(questionId) {
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'));
             const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+
+            confirmDeleteButton.setAttribute('data-question-id', questionId);
 
             confirmDeleteButton.addEventListener('click', function () {
                 deleteModal.hide();
@@ -325,7 +323,14 @@
 
             deleteModal.show();
         }
-        function deleteQuestion(questionId) {
+        function deleteQuestionContainer(questionId) {
+    const questionContainer = document.querySelector(`.accordion-container[data-question-id="${questionId}"]`);
+    if (questionContainer) {
+        questionContainer.remove();
+    }
+}
+
+function deleteQuestion(questionId) {
     fetch(`/delete_question/${questionId}/`, {
         method: 'POST',
         headers: {
@@ -336,15 +341,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.message === 'Question deleted successfully') {
-                // Remove the deleted question's accordion item
-                const questionItem = document.querySelector(`[data-question-id="${questionId}"]`);
-                questionItem.remove();
+              
+                deleteQuestionContainer(questionId);
             }
         })
         .catch(error => {
             console.error('Error:', error);
         });
 }
+
         document.addEventListener('click', function (event) {
             if (event.target.classList.contains('edit-button')) {
                 const questionId = event.target.getAttribute('data-question-id');
@@ -383,27 +388,27 @@
         }
 
         function updateQuestionText(questionId, updatedQuestionText) {
-    fetch(`/update_question_text/${questionId}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded', 
-            'X-CSRFToken': csrfToken
-        },
-        body: `updated_question_text=${encodeURIComponent(updatedQuestionText)}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message === 'Question text updated successfully') {
-           
-            const questionTextElement = document.querySelector(`#heading${questionId} .accordion-button`);
-            questionTextElement.textContent = `Question ${questionId}: ${updatedQuestionText}`;
-            fetchQuestionTextForEdit(questionId);
+            fetch(`/update_question_text/${questionId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `updated_question_text=${encodeURIComponent(updatedQuestionText)}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Question text updated successfully') {
+
+                        const questionTextElement = document.querySelector(`#heading${questionId} .accordion-button`);
+                        questionTextElement.textContent = `Question ${questionId}: ${updatedQuestionText}`;
+                        fetchQuestionTextForEdit(questionId);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
 
 
 
