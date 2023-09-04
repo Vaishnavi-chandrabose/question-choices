@@ -9,7 +9,7 @@ import json
 
 
 def index(request):
-    return HttpResponse("hai.")
+    return HttpResponse("Hello, world. You're at the polls index.")
 
 def login(request):
     template = 'login.html'
